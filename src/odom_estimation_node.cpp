@@ -228,12 +228,31 @@ namespace estimation
     tf::Quaternion orientation;
     quaternionMsgToTF(imu->orientation, orientation);
     imu_meas_ = tf::Transform(orientation, tf::Vector3(0,0,0));
+
+    /*
+    tf::Transform to_print = imu_meas_;
+    std::cout << "------------------" << std::endl;
+    std::cout << "x: " << to_print.inverse().getOrigin().getX();
+    std::cout << "y: " << to_print.inverse().getOrigin().getY();
+    std::cout << "z: " << to_print.inverse().getOrigin().getZ() << std::endl;
+    double roll, pitch, yaw;
+    to_print.inverse().getBasis().getRPY(roll, pitch, yaw);
+    std::cout << "roll: " << roll*180/M_PI << " pitch: " << pitch*180/M_PI << " yaw: " << yaw*180/M_PI << std::endl;
+    tf::Quaternion quat_base_to_sensor = orientation; //to_print.inverse().getRotation();
+    std::cout << "x: " << quat_base_to_sensor.getX(); //[0];
+    std::cout << " y: " << quat_base_to_sensor.getY(); //[1];
+    std::cout << " z: " << quat_base_to_sensor.getZ(); //[2];
+    std::cout << " w: " << quat_base_to_sensor.getW() << std::endl;
+    std::cout << "------------------" << std::endl;
+    */
+
     for (unsigned int i=0; i<3; i++)
       for (unsigned int j=0; j<3; j++)
         imu_covariance_(i+1, j+1) = imu->orientation_covariance[3*i+j];
 
     // Transforms imu data to base_footprint frame
-    if (!robot_state_.waitForTransform(base_footprint_frame_, imu->header.frame_id, imu_stamp_, ros::Duration(0.5))){
+    // if (!robot_state_.waitForTransform(base_footprint_frame_, imu->header.frame_id, imu_stamp_, ros::Duration(0.5))){
+    if (!robot_state_.waitForTransform(base_footprint_frame_, "odometry_link_IMU", imu_stamp_, ros::Duration(0.5))){
       // warn when imu was already activated, not when imu is not active yet
       if (imu_active_)
         ROS_ERROR("Could not transform imu message from %s to %s", imu->header.frame_id.c_str(), base_footprint_frame_.c_str());
@@ -244,7 +263,8 @@ namespace estimation
       return;
     }
     StampedTransform base_imu_offset;
-    robot_state_.lookupTransform(base_footprint_frame_, imu->header.frame_id, imu_stamp_, base_imu_offset);
+    // robot_state_.lookupTransform(base_footprint_frame_, imu->header.frame_id, imu_stamp_, base_imu_offset);
+    robot_state_.lookupTransform(base_footprint_frame_, "odometry_link_IMU", imu_stamp_, base_imu_offset);
     imu_meas_ = imu_meas_ * base_imu_offset;
 
     imu_time_  = Time::now();
@@ -260,6 +280,9 @@ namespace estimation
 
     my_filter_.addMeasurement(StampedTransform(imu_meas_.inverse(), imu_stamp_, base_footprint_frame_, "imu"), imu_covariance_);
     
+    
+    
+
     // activate imu
     if (!imu_active_) {
       if (!imu_initializing_){
