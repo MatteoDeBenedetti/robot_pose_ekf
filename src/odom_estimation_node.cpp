@@ -76,6 +76,7 @@ namespace estimation
     // paramters
     nh_private.param("output_frame", output_frame_, std::string("odom_combined"));
     nh_private.param("base_footprint_frame", base_footprint_frame_, std::string("base_footprint"));
+    nh_private.param("imu_frame", imu_frame_, std::string("imu_base"));
     nh_private.param("sensor_timeout", timeout_, 1.0);
     nh_private.param("odom_used", odom_used_, true);
     nh_private.param("imu_used",  imu_used_, true);
@@ -83,6 +84,7 @@ namespace estimation
     nh_private.param("gps_used",   gps_used_, false);
     nh_private.param("debug",   debug_, false);
     nh_private.param("self_diagnose",  self_diagnose_, false);
+    
     double freq;
     nh_private.param("freq", freq, 30.0);
 
@@ -252,7 +254,9 @@ namespace estimation
 
     // Transforms imu data to base_footprint frame
     // if (!robot_state_.waitForTransform(base_footprint_frame_, imu->header.frame_id, imu_stamp_, ros::Duration(0.5))){
-    if (!robot_state_.waitForTransform(base_footprint_frame_, "odometry_link_IMU", imu_stamp_, ros::Duration(0.5))){
+    // if (!robot_state_.waitForTransform(base_footprint_frame_, "odometry_link_IMU", imu_stamp_, ros::Duration(0.5))){
+    // if (!robot_state_.waitForTransform(base_footprint_frame_, "odometry_imu", imu_stamp_, ros::Duration(0.5))){
+    if (!robot_state_.waitForTransform(base_footprint_frame_, imu_frame_, imu_stamp_, ros::Duration(0.5))){
       // warn when imu was already activated, not when imu is not active yet
       if (imu_active_)
         ROS_ERROR("Could not transform imu message from %s to %s", imu->header.frame_id.c_str(), base_footprint_frame_.c_str());
@@ -264,7 +268,9 @@ namespace estimation
     }
     StampedTransform base_imu_offset;
     // robot_state_.lookupTransform(base_footprint_frame_, imu->header.frame_id, imu_stamp_, base_imu_offset);
-    robot_state_.lookupTransform(base_footprint_frame_, "odometry_link_IMU", imu_stamp_, base_imu_offset);
+    // robot_state_.lookupTransform(base_footprint_frame_, "odometry_link_IMU", imu_stamp_, base_imu_offset);
+    // robot_state_.lookupTransform(base_footprint_frame_, "odometry_imu", imu_stamp_, base_imu_offset);
+    robot_state_.lookupTransform(base_footprint_frame_, imu_frame_, imu_stamp_, base_imu_offset);
     imu_meas_ = imu_meas_ * base_imu_offset;
 
     imu_time_  = Time::now();
